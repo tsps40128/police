@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>警務涉外即時翻譯助手 Police Duty Translator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        police: {
+                            900: '#0B132B',
+                            800: '#1C2541',
+                            700: '#2A385B',
+                            accent: '#3A506B',
+                            gold: '#F4C430',
+                            goldHover: '#E0B020',
+                            badge: '#1E40AF',
+                            alert: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Microsoft JhengHei', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B132B;
+            color: #F3F4F6;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Hide scrollbars for slick look while maintaining functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans select-none pb-6">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-30 bg-police-800 shadow-lg border-b border-police-700">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-police-gold text-police-900 w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg shadow-md">
+                    <i class="fa-solid => fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide text-white flex items-center gap-2">
+                        涉外警務翻譯
+                        <span class="text-xs font-normal px-2 py-0.5 bg-police-badge text-blue-100 rounded-full border border-blue-400">執勤版</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Police Duty Translation Assistant</p>
+                </div>
+            </div>
+            <!-- Quick Alert / Help Button -->
+            <button onclick="toggleEmergencyModal()" class="bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-md flex items-center gap-1 transition">
+                <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+                <span>三項權利</span>
+            </button>
+        </div>
+
+        <!-- Language Selector Tabs -->
+        <div class="max-w-3xl mx-auto px-4 pt-2 pb-3 flex space-x-2 overflow-x-auto no-scrollbar">
+            <button onclick="selectLanguage('en')" id="lang-btn-en" class="lang-tab flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-bold border transition flex items-center justify-center gap-2 bg-police-gold text-police-900 border-police-gold shadow">
+                <span class="text-base">🇺🇸</span> 英文 (EN)
+            </button>
+            <button onclick="selectLanguage('vi')" id="lang-btn-vi" class="lang-tab flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-bold border transition flex items-center justify-center gap-2 bg-police-700 text-gray-300 border-gray-600 hover:bg-police-accent">
+                <span class="text-base">🇻🇳</span> 越南語 (VI)
+            </button>
+            <button onclick="selectLanguage('id')" id="lang-btn-id" class="lang-tab flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-bold border transition flex items-center justify-center gap-2 bg-police-700 text-gray-300 border-gray-600 hover:bg-police-accent">
+                <span class="text-base">🇮🇩</span> 印尼語 (ID)
+            </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="max-w-3xl mx-auto px-4 pb-3">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="搜尋關鍵字（例：護照、酒測、違規、律師）..." 
+                    class="w-full bg-police-900 border border-police-700 text-white placeholder-gray-400 pl-10 pr-10 py-2.5 rounded-xl focus:outline-none focus:border-police-gold text-sm shadow-inner">
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-3xl mx-auto px-4 pt-4 flex-1 w-full">
+        <!-- Category Navigation Buttons -->
+        <div id="categoryNav" class="grid grid-cols-5 gap-1.5 mb-4">
+            <button onclick="filterCategory('all')" id="cat-btn-all" class="cat-btn bg-police-gold text-police-900 font-bold py-2 rounded-lg text-xs flex flex-col items-center justify-center gap-1 shadow">
+                <i class="fa-solid fa-border-all text-sm"></i>
+                <span>全部</span>
+            </button>
+            <button onclick="filterCategory('identity')" id="cat-btn-identity" class="cat-btn bg-police-800 text-gray-300 hover:bg-police-700 border border-police-700 py-2 rounded-lg text-xs flex flex-col items-center justify-center gap-1">
+                <i class="fa-solid fa-address-card text-sm text-blue-400"></i>
+                <span>身分盤查</span>
+            </button>
+            <button onclick="filterCategory('traffic')" id="cat-btn-traffic" class="cat-btn bg-police-800 text-gray-300 hover:bg-police-700 border border-police-700 py-2 rounded-lg text-xs flex flex-col items-center justify-center gap-1">
+                <i class="fa-solid fa-car text-sm text-yellow-400"></i>
+                <span>交通執法</span>
+            </button>
+            <button onclick="filterCategory('rights')" id="cat-btn-rights" class="cat-btn bg-police-800 text-gray-300 hover:bg-police-700 border border-police-700 py-2 rounded-lg text-xs flex flex-col items-center justify-center gap-1">
+                <i class="fa-solid fa-scale-balanced text-sm text-red-400"></i>
+                <span>權利告知</span>
+            </button>
+            <button onclick="filterCategory('emergency')" id="cat-btn-emergency" class="cat-btn bg-police-800 text-gray-300 hover:bg-police-700 border border-police-700 py-2 rounded-lg text-xs flex flex-col items-center justify-center gap-1">
+                <i class="fa-solid fa-kit-medical text-sm text-green-400"></i>
+                <span>緊急救護</span>
+            </button>
+        </div>
+
+        <!-- Phrases Container -->
+        <div id="phrasesList" class="space-y-3.5">
+            <!-- Dynamic Content Injected Here -->
+        </div>
+
+        <!-- Empty Search State -->
+        <div id="emptyState" class="hidden text-center py-12">
+            <i class="fa-solid fa-magnifying-glass text-4xl text-gray-600 mb-3"></i>
+            <p class="text-gray-400 text-base">找不到相關的警務用語</p>
+            <p class="text-gray-500 text-xs mt-1">請嘗試變更關鍵字，或切換情境分類</p>
+        </div>
+    </main>
+
+    <!-- Large Text Card Overlay Modal -->
+    <div id="largeTextModal" class="fixed inset-0 bg-black/95 z-50 hidden flex-col justify-between p-6 backdrop-blur-md">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+            <span class="text-police-gold text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-expand"></i> 現場出示模式 (Large Display)
+            </span>
+            <button onclick="closeLargeText()" class="text-gray-400 hover:text-white text-2xl p-2 active:scale-95">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="my-auto text-center space-y-6">
+            <div id="modalTargetText" class="text-3xl md:text-5xl font-extrabold text-white leading-tight tracking-wide px-2">
+                <!-- Large Translated Text -->
+            </div>
+            <div id="modalZhText" class="text-xl md:text-2xl font-medium text-police-gold">
+                <!-- Chinese Reference -->
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-800">
+            <button id="modalPlayBtn" onclick="" class="bg-police-badge hover:bg-blue-700 active:scale-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-lg shadow-lg">
+                <i class="fa-solid fa-volume-high text-xl"></i>
+                <span>播放發音</span>
+            </button>
+            <button onclick="closeLargeText()" class="bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-lg">
+                <i class="fa-solid fa-check"></i>
+                <span>返回列表中</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Miranda Rights Quick Access Modal -->
+    <div id="emergencyModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-police-800 border border-police-gold rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-police-700 p-4 flex justify-between items-center border-b border-police-600">
+                <h2 class="text-lg font-bold text-police-gold flex items-center gap-2">
+                    <i class="fa-solid fa-scale-balanced"></i> 刑事訴訟法 第95條 告知事項
+                </h2>
+                <button onclick="toggleEmergencyModal()" class="text-gray-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-4 text-sm" id="mirandaContent">
+                <!-- Injected via JS -->
+            </div>
+            <div class="p-3 bg-police-900 border-t border-police-700 text-center">
+                <button onclick="toggleEmergencyModal()" class="w-full bg-police-gold text-police-900 font-bold py-2.5 rounded-xl">
+                    關閉此視窗
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-police-gold text-police-900 px-4 py-2.5 rounded-full font-bold text-sm shadow-xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-check-circle"></i>
+        <span id="toastMsg">已複製到剪貼簿</span>
+    </div>
+
+    <!-- JavaScript Data and Logic -->
+    <script>
+        // Police Duty Translation Dataset
+        const translationData = [
+            // --- Identity Check ---
+            {
+                id: 'id-1',
+                category: 'identity',
+                tags: ['身分', '證件', '護照', '盤查', '駕照'],
+                zh: '你好，我是警察。請出示您的護照或居留證。',
+                en: 'Hello, Police. Please show me your passport or Alien Resident Certificate (ARC).',
+                vi: 'Xin chào, tôi là cảnh sát. Vui lòng xuất trình hộ chiếu hoặc thẻ cư trú (ARC) của bạn.',
+                id: 'Halo, saya polisi. Tolong tunjukkan paspor atau Kartu Izin Tinggal (ARC) Anda.'
+            },
+            {
+                id: 'id-2',
+                category: 'identity',
+                tags: ['姓名', '生日', '身分', '詢問'],
+                zh: '請問您叫什麼名字？您的出生年月日是什麼？',
+                en: 'What is your name? What is your date of birth?',
+                vi: 'Tên bạn là gì? Ngày tháng năm sinh của bạn là khi nào?',
+                id: 'Siapa nama Anda? Kapan tanggal lahir Anda?'
+            },
+            {
+                id: 'id-3',
+                category: 'identity',
+                tags: ['居留', '工作', '雇主', '合法'],
+                zh: '請配合身分查證，請問您目前在哪裡工作？',
+                en: 'Please cooperate with identity check. Where are you currently working?',
+                vi: 'Vui lòng hợp tác kiểm tra danh tính. Hiện tại bạn đang làm việc ở đâu?',
+                id: 'Mohon bekerja sama untuk pemeriksaan identitas. Di mana Anda bekerja saat ini?'
+            },
+            {
+                id: 'id-4',
+                category: 'identity',
+                tags: ['同伴', '同行', '朋友'],
+                zh: '請問這位同行的人是您的朋友嗎？',
+                en: 'Is this person traveling with you your friend?',
+                vi: 'Người đi cùng này có phải là bạn của bạn không?',
+                id: 'Apakah orang yang bersamamu ini temanmu?'
+            },
+
+            // --- Traffic Stop ---
+            {
+                id: 'tf-1',
+                category: 'traffic',
+                tags: ['駕照', '行照', '車牌', '停車'],
+                zh: '請靠邊停車。請出示您的駕駛執照與行車執照。',
+                en: 'Please pull over to the side. Show me your driver\'s license and vehicle registration.',
+                vi: 'Vui lòng tấp xe vào lề. Cho tôi xem giấy phép lái xe và đăng ký xe của bạn.',
+                id: 'Tolong tepi jalan dan berhenti. Tunjukkan SIM dan STNK Anda.'
+            },
+            {
+                id: 'tf-2',
+                category: 'traffic',
+                tags: ['安全帽', '違規', '機車', '罰單'],
+                zh: '騎乘機車請配戴安全帽。您已違反交通規則。',
+                en: 'You must wear a helmet when riding a scooter. You have violated traffic rules.',
+                vi: 'Bạn phải đội mũ bảo hiểm khi đi xe máy. Bạn đã vi phạm luật giao thông.',
+                id: 'Anda harus memakai helm saat naik sepeda motor. Anda telah melanggar peraturan lalu lintas.'
+            },
+            {
+                id: 'tf-3',
+                category: 'traffic',
+                tags: ['紅燈', '闖紅燈', '超速', '違規'],
+                zh: '您剛剛闖紅燈 / 超速駕駛了。',
+                en: 'You just ran a red light / were speeding.',
+                vi: 'Bạn vừa vượt đèn đỏ / chạy quá tốc độ.',
+                id: 'Anda baru saja menerobos lampu merah / mengebut.'
+            },
+            {
+                id: 'tf-4',
+                category: 'traffic',
+                tags: ['酒測', '喝酒', '吹氣', '酒精'],
+                zh: '請配合進行酒精濃度測試，請持續吹氣到機器發出嗶聲。',
+                en: 'Please take a breathalyzer test. Blow continuously until the device beeps.',
+                vi: 'Vui lòng kiểm tra nồng độ cồn. Thổi liên tục cho đến khi máy phát tiếng bíp.',
+                id: 'Tolong lakukan tes kadar alkohol. Tiup terus sampai alat berbunyi bip.'
+            },
+            {
+                id: 'tf-5',
+                category: 'traffic',
+                tags: ['拒測', '酒測', '罰鍰', '扣車'],
+                zh: '若您拒絕接受酒測，將依法處以高額罰鍰並移置車輛。',
+                en: 'If you refuse the breathalyzer test, you will face a heavy fine and vehicle impoundment.',
+                vi: 'Nếu bạn từ chối kiểm tra nồng độ cồn, bạn sẽ bị phạt tiền nặng và bị tạm giữ xe.',
+                id: 'Jika Anda menolak tes alkohol, Anda akan dikenakan denda berat dan kendaraan akan disita.'
+            },
+
+            // --- Rights & Legal ---
+            {
+                id: 'rg-1',
+                category: 'rights',
+                tags: ['逮捕', '權利', '三項權利', '通知'],
+                zh: '您現在被逮捕了。您可以行使保持沈默、選任辯護人（律師）的權利。',
+                en: 'You are under arrest. You have the right to remain silent and the right to an attorney.',
+                vi: 'Bạn đang bị bắt. Bạn có quyền giữ im lặng và quyền mời luật sư bào chữa.',
+                id: 'Anda ditangkap sekarang. Anda berhak untuk diam dan berhak atas pengacara.'
+            },
+            {
+                id: 'rg-2',
+                category: 'rights',
+                tags: ['通譯', '翻譯', '母語', '語言'],
+                zh: '如果您聽不懂中文，我們將為您安排免費的通譯人員協助。',
+                en: 'If you do not understand Chinese, we will arrange a free interpreter for you.',
+                vi: 'Nếu bạn không hiểu tiếng Trung, chúng tôi sẽ arranged một phiên dịch viên miễn phí cho bạn.',
+                id: 'Jika Anda tidak mengerti bahasa Mandarin, kami akan menyediakan penerjemah gratis untuk Anda.'
+            },
+            {
+                id: 'rg-3',
+                category: 'rights',
+                tags: ['代表處', '大使館', '通知家屬', '駐臺'],
+                zh: '您有權要求通知您國家的駐臺辦事處或您的家屬。',
+                en: 'You have the right to request notification of your country representative office or family.',
+                vi: 'Bạn có quyền yêu cầu thông báo cho văn phòng đại diện của quốc gia bạn hoặc gia đình bạn.',
+                id: 'Anda berhak meminta agar kantor perwakilan negara Anda atau keluarga Anda diberitahu.'
+            },
+            {
+                id: 'rg-4',
+                category: 'rights',
+                tags: ['筆錄', '簽名', '確認'],
+                zh: '請確認這份筆錄記載內容是否正確，確認無誤後請在下方簽名。',
+                en: 'Please check if the statement is correct. If correct, please sign at the bottom.',
+                vi: 'Vui lòng kiểm tra xem bản ghi chép này có chính xác không, nếu đúng hãy ký tên phía dưới.',
+                id: 'Silakan periksa apakah laporan ini benar. Jika benar, silakan tanda tangan di bawah.'
+            },
+
+            // --- Emergency & First Aid ---
+            {
+                id: 'em-1',
+                category: 'emergency',
+                tags: ['受傷', '救護車', '醫院', '疼痛'],
+                zh: '您有受傷嗎？需要幫您叫救護車送到醫院嗎？',
+                en: 'Are you injured? Do you need me to call an ambulance to take you to the hospital?',
+                vi: 'Bạn có bị thương không? Có cần tôi gọi xe cấp cứu đưa bạn đến bệnh viện không?',
+                id: 'Apakah Anda terluka? Apakah Anda perlu saya memanggil ambulans ke rumah sakit?'
+            },
+            {
+                id: 'em-2',
+                category: 'emergency',
+                tags: ['冷靜', '安全', '危險'],
+                zh: '請保持冷靜，現在這裡很安全，警察會提供協助。',
+                en: 'Please stay calm. You are safe now. The police are here to help.',
+                vi: 'Xin hãy bình tĩnh, ở đây hiện tại rất an toàn, cảnh sát sẽ hỗ trợ bạn.',
+                id: 'Harap tenang, di sini aman sekarang, polisi akan membantu Anda.'
+            },
+            {
+                id: 'em-3',
+                category: 'emergency',
+                tags: ['偷竊', '遺失', '錢包', '手機', '報案'],
+                zh: '請問您遺失或被偷了什麼物品？請描述外觀與時間地點。',
+                en: 'What items did you lose or have stolen? Please describe the appearance, time, and location.',
+                vi: 'Bạn đã bị mất hay bị trộm đồ gì? Vui lòng mô tả đặc điểm, thời gian và địa điểm.',
+                id: 'Barang apa yang hilang atau dicuri? Tolong jelaskan bentuk, waktu, dan lokasinya.'
+            }
+        ];
+
+        // App State
+        let currentLang = 'en'; // 'en', 'vi', 'id'
+        let currentCategory = 'all';
+        let searchQuery = '';
+
+        // Speech Synthesis Voices Cache
+        let availableVoices = [];
+
+        function initVoices() {
+            if ('speechSynthesis' in window) {
+                availableVoices = window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {
+                    availableVoices = window.speechSynthesis.getVoices();
+                };
+            }
+        }
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            initVoices();
+            renderPhrases();
+            renderMirandaContent();
+        });
+
+        // Switch Language
+        function selectLanguage(lang) {
+            currentLang = lang;
+            
+            // Update Tab UI
+            document.querySelectorAll('.lang-tab').forEach(btn => {
+                btn.classList.remove('bg-police-gold', 'text-police-900', 'border-police-gold', 'shadow');
+                btn.classList.add('bg-police-700', 'text-gray-300', 'border-gray-600');
+            });
+
+            const activeBtn = document.getElementById(`lang-btn-${lang}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-police-700', 'text-gray-300', 'border-gray-600');
+                activeBtn.classList.add('bg-police-gold', 'text-police-900', 'border-police-gold', 'shadow');
+            }
+
+            renderPhrases();
+            renderMirandaContent();
+        }
+
+        // Filter Category
+        function filterCategory(cat) {
+            currentCategory = cat;
+            
+            // Update Category Buttons UI
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('bg-police-gold', 'text-police-900', 'font-bold', 'shadow');
+                btn.classList.add('bg-police-800', 'text-gray-300');
+            });
+
+            const activeBtn = document.getElementById(`cat-btn-${cat}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-police-800', 'text-gray-300');
+                activeBtn.classList.add('bg-police-gold', 'text-police-900', 'font-bold', 'shadow');
+            }
+
+            renderPhrases();
+        }
+
+        // Handle Search Input
+        function handleSearch() {
+            const input = document.getElementById('searchInput');
+            searchQuery = input.value.trim().toLowerCase();
+            
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            renderPhrases();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            searchQuery = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            renderPhrases();
+        }
+
+        // Get Language Code for Web Speech API
+        function getLangCode(lang) {
+            switch(lang) {
+                case 'en': return 'en-US';
+                case 'vi': return 'vi-VN';
+                case 'id': return 'id-ID';
+                default: return 'en-US';
+            }
+        }
+
+        // Text-To-Speech Execution
+        function speakText(text, lang) {
+            if (!('speechSynthesis' in window)) {
+                showToast('您的裝置不支援語音朗讀');
+                return;
+            }
+
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const targetLang = getLangCode(lang);
+            utterance.lang = targetLang;
+            utterance.rate = 0.9; // Slightly slower for clarity
+
+            // Try to find matching voice
+            if (availableVoices.length > 0) {
+                const matchedVoice = availableVoices.find(v => v.lang.includes(targetLang) || v.lang.startsWith(lang));
+                if (matchedVoice) {
+                    utterance.voice = matchedVoice;
+                }
+            }
+
+            window.speechSynthesis.speak(utterance);
+            showToast('📢 正在播放發音...');
+        }
+
+        // Render Phrases List
+        function renderPhrases() {
+            const container = document.getElementById('phrasesList');
+            const emptyState = document.getElementById('emptyState');
+            container.innerHTML = '';
+
+            const filteredData = translationData.filter(item => {
+                // Category Filter
+                const matchCategory = (currentCategory === 'all') || (item.category === currentCategory);
+                
+                // Search Query Filter
+                let matchSearch = true;
+                if (searchQuery) {
+                    const searchableText = `${item.zh} ${item.en} ${item.vi} ${item.id} ${item.tags.join(' ')}`.toLowerCase();
+                    matchSearch = searchableText.includes(searchQuery);
+                }
+
+                return matchCategory && matchSearch;
+            });
+
+            if (filteredData.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filteredData.forEach(item => {
+                const targetTranslation = item[currentLang];
+                
+                const card = document.createElement('div');
+                card.className = 'bg-police-800 border border-police-700 hover:border-police-accent rounded-xl p-4 shadow-md transition';
+
+                card.innerHTML = `
+                    <div class="flex flex-col space-y-3">
+                        <!-- Chinese Phrase -->
+                        <div class="flex justify-between items-start">
+                            <div class="text-base font-bold text-white leading-snug">
+                                <span class="inline-block w-2 h-2 rounded-full bg-police-gold mr-1.5"></span>
+                                ${escapeHtml(item.zh)}
+                            </div>
+                        </div>
+
+                        <!-- Foreign Language Translation -->
+                        <div class="bg-police-900/80 p-3 rounded-lg border border-police-700/60">
+                            <p class="text-lg font-semibold text-police-gold leading-relaxed">
+                                ${escapeHtml(targetTranslation)}
+                            </p>
+                        </div>
+
+                        <!-- Action Buttons Row -->
+                        <div class="flex items-center justify-between pt-1">
+                            <div class="flex space-x-1">
+                                ${item.tags.map(tag => `<span class="text-[10px] bg-police-700 text-gray-300 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="speakText('${escapeQuotes(targetTranslation)}', '${currentLang}')" class="bg-police-badge hover:bg-blue-600 active:scale-95 text-white p-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-volume-high text-sm"></i>
+                                    <span>朗讀</span>
+                                </button>
+                                <button onclick="openLargeText('${escapeQuotes(targetTranslation)}', '${escapeQuotes(item.zh)}')" class="bg-police-700 hover:bg-police-accent active:scale-95 text-gray-200 p-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-expand text-sm"></i>
+                                    <span>放大</span>
+                                </button>
+                                <button onclick="copyToClipboard('${escapeQuotes(targetTranslation)}')" class="bg-police-700 hover:bg-police-accent active:scale-95 text-gray-200 p-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                                    <i class="fa-regular fa-copy text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Open Large Text Display Modal
+        function openLargeText(targetText, zhText) {
+            document.getElementById('modalTargetText').innerText = targetText;
+            document.getElementById('modalZhText').innerText = zhText;
+            
+            const playBtn = document.getElementById('modalPlayBtn');
+            playBtn.onclick = () => speakText(targetText, currentLang);
+
+            const modal = document.getElementById('largeTextModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLargeText() {
+            const modal = document.getElementById('largeTextModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Toggle Miranda Emergency Modal
+        function toggleEmergencyModal() {
+            const modal = document.getElementById('emergencyModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Render Miranda Content
+        function renderMirandaContent() {
+            const container = document.getElementById('mirandaContent');
+            
+            const rights = [
+                {
+                    title: '一、犯罪嫌疑及罪名',
+                    en: '1. You are suspected of a crime and the charges against you.',
+                    vi: '1. Bạn bị nghi ngờ phạm tội và các cáo buộc chống lại bạn.',
+                    id: '1. Anda dicurigai melakukan kejahatan dan tuduhan terhadap Anda.'
+                },
+                {
+                    title: '二、得行使保持沉默',
+                    en: '2. You have the right to remain silent and are not obliged to make any statement.',
+                    vi: '2. Bạn có quyền giữ im lặng và không bắt buộc phải đưa ra bất kỳ lời khai nào.',
+                    id: '2. Anda berhak untuk diam dan tidak wajib memberikan pernyataan apa pun.'
+                },
+                {
+                    title: '三、得選任辯護人（律師）',
+                    en: '3. You have the right to retain a defense attorney.',
+                    vi: '3. Bạn có quyền mời luật sư bào chữa.',
+                    id: '3. Anda berhak menunjuk pengacara.'
+                },
+                {
+                    title: '四、得請求調查有利之證據',
+                    en: '4. You may request the investigation of evidence favorable to you.',
+                    vi: '4. Bạn có thể yêu cầu điều tra các bằng chứng có lợi cho bạn.',
+                    id: '4. Anda dapat meminta penyelidikan atas bukti yang menguntungkan Anda.'
+                }
+            ];
+
+            container.innerHTML = rights.map(r => `
+                <div class="bg-police-900 p-3 rounded-xl border border-police-700">
+                    <p class="font-bold text-police-gold text-base mb-1">${r.title}</p>
+                    <p class="text-white text-base leading-snug">${r[currentLang]}</p>
+                </div>
+            `).join('');
+        }
+
+        // Copy Text to Clipboard
+        function copyToClipboard(text) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast('已複製譯文至剪貼簿');
+        }
+
+        // Show Toast Notification
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = msg;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Helper functions for string safety
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    </script>
+</body>
+</html>
